@@ -16,7 +16,7 @@ Install
 
         ./configure && make
         
-    If you Mac OS X system, you need install autoconf. Like: brew install autoconf
+    If you use Mac OS X system, you need install autoconf. Like: brew install autoconf
 
 * OpenWRT
     * For ar71xx router:
