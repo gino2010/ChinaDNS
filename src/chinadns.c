@@ -90,9 +90,9 @@ static int should_filter_query(ns_msg msg, struct in_addr dns_addr);
 static void queue_add(id_addr_t id_addr);
 static id_addr_t *queue_lookup(uint16_t id);
 
-#define ID_ADDR_QUEUE_LEN 128
+//#define ID_ADDR_QUEUE_LEN 256
 // use a queue instead of hash here since it's not long
-static id_addr_t id_addr_queue[ID_ADDR_QUEUE_LEN];
+static id_addr_t id_addr_queue[256];
 static int id_addr_queue_pos = 0;
 
 static int local_sock;
@@ -263,11 +263,6 @@ static int resolve_dns_servers() {
   char *pch = strchr(dns_servers, ',');
   chn_dns_servers_len = 0;
   foreign_dns_servers_len = 0;
-//  while (pch != NULL) {
-//    dns_servers_len++;
-//    pch = strchr(pch + 1, ',');
-//  }
-//  dns_server_addrs = calloc(dns_servers_len, sizeof(id_addr_t));
   foreign_dns_server_addrs = calloc(1, sizeof(id_addr_t));
   chn_dns_server_addrs = calloc(1, sizeof(id_addr_t));
 
@@ -308,7 +303,7 @@ static int resolve_dns_servers() {
     if (!(chn_dns_servers_len && foreign_dns_servers_len)) {
       VERR("You should have at least one Chinese DNS and one foreign DNS when "
           "chnroutes is enabled\n");
-      return 0;
+      return -1;
     }
   }
   return 0;
@@ -450,7 +445,6 @@ static void dns_handle_local() {
   socklen_t src_addrlen = sizeof(struct sockaddr);
   uint16_t query_id;
   ssize_t len;
-  ssize_t clen;
   int i;
   const char *question_hostname;
   ns_msg msg;
@@ -490,18 +484,23 @@ static void dns_handle_local() {
         memcpy(compression_buf + off + 1, global_buf + off, len - off);
         compression_buf[off-1] = '\xc0';
         compression_buf[off] = '\x04';
-        clen = len + 1;
-      }
+        for (i = 0; i < foreign_dns_servers_len; i++) {
+        	if (-1 == sendto(remote_sock, compression_buf, len + 1, 0,
+                       foreign_dns_server_addrs[i].addr, foreign_dns_server_addrs[i].addrlen))
+                ERR("sendto");
+        }
+      }else{
+      	for (i = 0; i < foreign_dns_servers_len; i++) {
+        	if (-1 == sendto(remote_sock, global_buf, len, 0,
+                       foreign_dns_server_addrs[i].addr, foreign_dns_server_addrs[i].addrlen))
+                ERR("sendto");
+        }
       }
     for (i = 0; i < chn_dns_servers_len; i++) {
       if (-1 == sendto(remote_sock, global_buf, len, 0,
                        chn_dns_server_addrs[i].addr, chn_dns_server_addrs[i].addrlen))
         ERR("sendto");
     }
-    for (i = 0; i < foreign_dns_servers_len; i++) {
-      if (-1 == sendto(remote_sock, compression_buf, clen, 0,
-                       foreign_dns_server_addrs[i].addr, foreign_dns_server_addrs[i].addrlen))
-        ERR("sendto");
     }
   }
   else
@@ -556,7 +555,7 @@ static void dns_handle_remote() {
 }
 
 static void queue_add(id_addr_t id_addr) {
-  id_addr_queue_pos = (id_addr_queue_pos + 1) % ID_ADDR_QUEUE_LEN;
+  id_addr_queue_pos = (uint8_t)(id_addr.id & 0xff);
   // free next hole
   id_addr_t old_id_addr = id_addr_queue[id_addr_queue_pos];
   free(old_id_addr.addr);
@@ -565,11 +564,9 @@ static void queue_add(id_addr_t id_addr) {
 
 static id_addr_t *queue_lookup(uint16_t id) {
   int i;
-  // TODO assign new id instead of using id from clients
-  for (i = 0; i < ID_ADDR_QUEUE_LEN; i++) {
-    if (id_addr_queue[i].id == id)
-      return id_addr_queue + i;
-  }
+  i = (uint8_t)(id & 0xff);
+  if (id_addr_queue[i].id == id)
+  	return id_addr_queue + i;
   return NULL;
 }
 
