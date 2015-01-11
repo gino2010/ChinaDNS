@@ -15,7 +15,8 @@ Install
     [Download a release].
 
         ./configure && make
-        src/chinadns -l iplist.txt -c chnroute.txt
+        
+    If you Mac OS X system, you need install autoconf. Like: brew install autoconf
 
 * OpenWRT
     * For ar71xx router:
