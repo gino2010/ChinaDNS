@@ -18,6 +18,8 @@ Install
         src/chinadns -l iplist.txt -c chnroute.txt
 
 * OpenWRT
+    * For ar71xx router:
+      Download [precompiled] ipk file and install.
 
     * Build yourself:
       cd into [SDK] root, then
@@ -142,3 +144,4 @@ Please visit [Issue Tracker]
 [Tomato toolchain]:     http://downloads.linksysbycisco.com/downloads/WRT54GL_v4.30.11_11_US.tgz
 [weird things]:         http://en.wikipedia.org/wiki/Great_Firewall_of_China#Blocking_methods
 [DNS compression pointer mutation]: https://gist.github.com/klzgrad/f124065c0616022b65e5
+[precompiled]:          https://github.com/Pentiumluyu/ChinaDNS/releases/tag/1.2.2
